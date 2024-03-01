@@ -1,0 +1,8 @@
+Model Information:
+* title:	Luffy Hat
+* source:	https://sketchfab.com/3d-models/luffy-hat-3af7f978b35b49d1a51bf1f3aba90923
+* author:	ผมเรียนกราฟิก (https://sketchfab.com/ramakienx)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works
