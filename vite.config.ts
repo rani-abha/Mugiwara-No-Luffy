@@ -10,7 +10,17 @@ const root = resolve(__dirname, "src")
 const outDir = resolve(__dirname, "builds")
 
 export default defineConfig({
-    plugins: [react(), glsl(), gltf()],
+    plugins: [react(), glsl(), gltf(),
+    {
+        configureServer(server) {
+            server.middlewares.use((req, res, next) => {
+                if (req.url.endsWith('.gltf')) {
+                    res.setHeader('Content-Type', 'application/octet-stream')
+                }
+                next()
+            })
+        },
+    }],
     build: {
         outDir: outDir
     },
@@ -21,5 +31,5 @@ export default defineConfig({
             "shaders": resolve(root, "shaders"),
             "utils": resolve(root, "utils"),
         }
-    }
+    },
 })
