@@ -6,7 +6,11 @@ import * as THREE from "three"
 import { GUI } from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from "three/examples/jsm/Addons.js"
-import { useLoader, Canvas } from '@react-three/fiber'
+import { useLoader } from '@react-three/fiber'
+import { UnrealBloomPass } from "three/examples/jsm/Addons.js"
+import { EffectComposer } from "three/examples/jsm/Addons.js"
+import { RenderPass } from "three/examples/jsm/Addons.js"
+import { OutputPass } from "three/examples/jsm/Addons.js"
 
 
 
@@ -41,13 +45,18 @@ const Scene = ({ }: Props) => {
     const containerRef: any = useRef(null)
     const gltf = useLoader(GLTFLoader, '../../../public/scene.gltf')
     const butterfly = useLoader(GLTFLoader, '../../../public/butterfly/scene.gltf')
+    const groundFlower = useLoader(GLTFLoader, '../../../public/grass_patch/scene.gltf')
+    const textureLoader = new THREE.TextureLoader()
+    const floorTexture = textureLoader.load('../../../cartoon-stone-texture/576.jpg')
+
+
 
     useEffect(() => {
         if (gltf) console.log("hat Model loaded!")
         if (butterfly) console.log("butterfly model loaded!")
+        if (groundFlower) console.log("groundFlower model loaded!")
+        if (floorTexture) console.log("floorTexture  loaded!")
     }, [gltf])
-    // const gltf = useLoader(GLTFLoader, 'shaders/luffy_hat/scene.gltf')
-    // const gltf = useLoader(GLTFLoader, 'file:///F:/Abha/threejs_spline/reactjs-3js-vitejs-starter-project/src/shaders/luffy_hat/scene.gltf')
 
 
 
@@ -100,7 +109,8 @@ const Scene = ({ }: Props) => {
     const useCreateButterfly = () => {
         const butterfly_ = butterfly.scene.clone(true)
 
-        butterfly_.scale.set(0.001, 0.001, 0.001)
+        butterfly_.scale.set(0.01, 0.01, 0.01)
+        // butterfly_.scale.set(0.001, 0.001, 0.001)
 
         butterfly_.position.set(2, 0, 0)
         const initialX = Math.random() * 10 - (5 * Math.random()) // Adjust the range based on your scene size
@@ -168,7 +178,7 @@ const Scene = ({ }: Props) => {
         hemiLight.color.setHSL(0.6, 1, 0.6)
         hemiLight.groundColor.setHSL(0.095, 1, 0.75)
         hemiLight.position.set(0, 50, 0)
-        scene.add(hemiLight)
+        // scene.add(hemiLight)
 
         const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10)
         scene.add(hemiLightHelper)
@@ -203,10 +213,16 @@ const Scene = ({ }: Props) => {
         // console.log("SCENEEEEEEE GRP", gltf.scene.children)
         scene.add(gltf.scene)
 
-        // scene.add(butterfly.scene)
-        // butterfly.scene.position.set(2, 0, 0)
-        // butterfly.scene.scale.set(0.001, 0.001, 0.001)
-        console.log("LEN::", butterflies.length)
+        groundFlower.scene.position.set(0, -2, 0)
+        groundFlower.scene.scale.set(0.5, 0.5, 0.5)
+        scene.add(groundFlower.scene)
+
+
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(100, 100), new THREE.MeshBasicMaterial({ map: floorTexture }))
+        mesh.position.set(0, -2, 0) // Adjust position as needed
+        mesh.scale.set(0.05, 0.05, 0.05) // Adjust scale as needed
+        mesh.rotation.set(Math.PI / 2, 0, 0)
+        scene.add(mesh)
 
         const amplitudeX = 5 // Amplitude in x-direction
         const amplitudeY = 2 // Amplitude in y-direction
@@ -303,6 +319,7 @@ const Scene = ({ }: Props) => {
         renderer.render(scene, camera)
 
     }
+
     // When the window resizes adapt the scene
     const onWindowResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight
