@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@gltf-transform/core": "^3.10.0",
+    "@gltf-transform/extensions": "^3.10.0",
+    "@gltf-transform/functions": "^3.10.0",
     "@react-three/fiber": "^8.15.16",
     "@types/dat.gui": "^0.7.12",
     "@types/three": "^0.158.2",
