@@ -3,28 +3,10 @@
 import React, { useRef, useEffect } from "react"
 import styled from "styled-components"
 import * as THREE from "three"
-import { GUI } from 'dat.gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 import { useLoader } from '@react-three/fiber'
-import { UnrealBloomPass } from "three/examples/jsm/Addons.js"
-import { EffectComposer } from "three/examples/jsm/Addons.js"
-import { RenderPass } from "three/examples/jsm/Addons.js"
-import { OutputPass } from "three/examples/jsm/Addons.js"
 
-
-
-// MARK: Redux
-// MARK: Types
-import GUIThreeHexColor from "types/GUI/GUIThreeHexColor"
-// MARK: Components
-// MARK: Shaders
-import vertexShader from "shaders/sample/vertex.glsl"
-import fragmentShader from "shaders/sample/fragment.glsl"
-// MARK: Functionality
-// MARK: Utils
-
-// MARK: Styled Components
 
 const Container = styled.div`
     display: flex;
@@ -40,23 +22,33 @@ const Container = styled.div`
 interface Props { }
 
 // Component
-const Scene = ({ }: Props) => {
+const Scene: React.FC<Props> = () => {
     // MARK: Refs
     const containerRef: any = useRef(null)
-    const gltf = useLoader(GLTFLoader, '../../../public/scene.gltf')
+    const luffyHat = useLoader(GLTFLoader, '../../../public/scene.gltf')
     const butterfly = useLoader(GLTFLoader, '../../../public/butterfly/scene.gltf')
     const groundFlower = useLoader(GLTFLoader, '../../../public/grass_patch/scene.gltf')
     const textureLoader = new THREE.TextureLoader()
     const floorTexture = textureLoader.load('../../../cartoon-stone-texture/576.jpg')
+    const scene = new THREE.Scene()
+    const renderer = new THREE.WebGLRenderer()
+    const camera = new THREE.PerspectiveCamera()
+    const camera1 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 20)
+    const controls = new OrbitControls(camera, renderer.domElement)
+    const groundFloor = new THREE.Mesh(new THREE.BoxGeometry(100, 100), new THREE.MeshBasicMaterial({ map: floorTexture }))
 
+    const arrowPos = new THREE.Vector3(-2, 2, 2)
+    scene.add(new THREE.ArrowHelper(new THREE.Vector3(1, 0, 0), arrowPos, 60, 0x7F2020, 20, 10))
+    scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), arrowPos, 60, 0x207F20, 20, 10))
+    scene.add(new THREE.ArrowHelper(new THREE.Vector3(0, 0, 1), arrowPos, 60, 0x20207F, 20, 10))
 
 
     useEffect(() => {
-        if (gltf) console.log("hat Model loaded!")
+        if (luffyHat) console.log("hat Model loaded!")
         if (butterfly) console.log("butterfly model loaded!")
         if (groundFlower) console.log("groundFlower model loaded!")
         if (floorTexture) console.log("floorTexture  loaded!")
-    }, [gltf])
+    }, [luffyHat])
 
 
 
@@ -76,41 +68,19 @@ const Scene = ({ }: Props) => {
             // componentWillUnmount events
             // Make sure to remove the renderer from the container, to avoid ThreeJS drawing an additional canvas everytime you make changes to the code.
             containerRef.current.removeChild(renderer.domElement)
-            gui.destroy()
             // Remove the event listener
             window.removeEventListener("resize", onWindowResize, false)
         }
     }, [])
 
-    // MARK: Variables
-    const scene = new THREE.Scene()
-    const renderer = new THREE.WebGLRenderer()
-    const camera = new THREE.PerspectiveCamera()
-    const camera1 = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.25, 20)
 
     camera1.position.set(- 1.8, 0.6, 2.7)
-
-    // Color
-    const geometryBaseColor: GUIThreeHexColor = {
-        hex: "#F2BA59"
-    }
-
-    // Shader Material
-    const shaderMaterial = new THREE.ShaderMaterial({
-        vertexShader: vertexShader,
-        fragmentShader: fragmentShader,
-        uniforms: {
-            color: { value: new THREE.Color(geometryBaseColor.hex) }
-        }
-    })
-
-    const gui = new GUI()
 
     const useCreateButterfly = () => {
         const butterfly_ = butterfly.scene.clone(true)
 
-        butterfly_.scale.set(0.01, 0.01, 0.01)
-        // butterfly_.scale.set(0.001, 0.001, 0.001)
+        // butterfly_.scale.set(0.01, 0.01, 0.01)
+        butterfly_.scale.set(0.001, 0.001, 0.001)
 
         butterfly_.position.set(2, 0, 0)
         const initialX = Math.random() * 10 - (5 * Math.random()) // Adjust the range based on your scene size
@@ -134,99 +104,87 @@ const Scene = ({ }: Props) => {
         return { x, y }
     }
 
+    const boundaryVertices = new Set()
+    butterfly.scene.traverse((child) => {
+        if (child.isMesh) {
+            const geometry = child.geometry
 
-    // MARK: Functionality
+            // Make sure that the geometry has vertex normals
+            geometry.computeVertexNormals()
+
+            const vertices = geometry.getAttribute('position').array // Access vertices
+            const faces = geometry.getIndex().array // Access faces
+
+            const edges = {} // Map to store edges and their references
+
+            // Loop through faces to identify edges
+            for (let i = 0; i < faces.length; i += 3) {
+                const v1 = faces[i]
+                const v2 = faces[i + 1]
+                const v3 = faces[i + 2]
+
+                // Store edges as key-value pairs in the map
+                const edgesArr = [
+                    [v1, v2].sort().toString(),
+                    [v2, v3].sort().toString(),
+                    [v3, v1].sort().toString()
+                ]
+
+                // Increment edge reference count
+                edgesArr.forEach(edge => {
+                    edges[edge] = (edges[edge] || 0) + 1
+                })
+            }
+
+            // Check edges with only one reference (boundary edges)
+            Object.keys(edges).forEach(edge => {
+                if (edges[edge] === 1) {
+                    edge.split(',').forEach(v => boundaryVertices.add(parseInt(v)))
+                }
+            })
+        }
+
+    })
+    console.log('Boundary vertices:', boundaryVertices)
+
     const renderScene = () => {
-        const controls = new OrbitControls(camera, renderer.domElement)
         const clock = new THREE.Clock()
-
         // Clear the Scene
         scene.clear()
+        setupLights()
+        setupControls()
+
         // Create a scene, camera, and renderer
         camera.fov = 75
         camera.aspect = window.innerWidth / window.innerHeight
         camera.near = 0.1
         camera.far = 1000
-        // Set up the renderer
         renderer.setSize(window.innerWidth, window.innerHeight)
         renderer.setPixelRatio(window.devicePixelRatio)
         containerRef.current.appendChild(renderer.domElement)
 
-        controls.addEventListener('change', render) // use if there is no animation loop
-        controls.enableDamping = true
-        controls.dampingFactor = 0.25
-        controls.enableZoom = true
-        controls.minDistance = 2
-        controls.maxDistance = 10
-        controls.target.set(0, 0, - 0.2)
-        controls.update()
-
-        // Create a plane that matches the camera view
-        const planeGeometry = new THREE.PlaneGeometry(2, 2)
-        const coneGeometry = new THREE.ConeGeometry(0.5, 1, 32)
-        const plane = new THREE.Mesh(planeGeometry, shaderMaterial)
-        const cone = new THREE.Mesh(coneGeometry, shaderMaterial)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
-        scene.add(ambientLight)
-
-        scene.background = new THREE.Color().setHSL(0.6, 0, 1)
+        scene.background = new THREE.Color().setHSL(0.6, 0.3, 0.8)
         scene.fog = new THREE.Fog(scene.background, 1, 5000)
 
-        // LIGHTS
-
-        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 2)
-        hemiLight.color.setHSL(0.6, 1, 0.6)
-        hemiLight.groundColor.setHSL(0.095, 1, 0.75)
-        hemiLight.position.set(0, 50, 0)
-        // scene.add(hemiLight)
-
-        const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10)
-        scene.add(hemiLightHelper)
-
-        //
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 3)
-        dirLight.color.setHSL(0.1, 1, 0.95)
-        dirLight.position.set(- 1, 1.75, 1)
-        dirLight.position.multiplyScalar(30)
-        scene.add(dirLight)
-
-        dirLight.castShadow = true
-
-        dirLight.shadow.mapSize.width = 2048
-        dirLight.shadow.mapSize.height = 2048
-
-        const d = 50
-
-        dirLight.shadow.camera.left = - d
-        dirLight.shadow.camera.right = d
-        dirLight.shadow.camera.top = d
-        dirLight.shadow.camera.bottom = - d
-
-        dirLight.shadow.camera.far = 3500
-        dirLight.shadow.bias = - 0.0001
-
-
-        // Add the Plane
-        gltf.scene.position.set(0, 0, 0)
-        gltf.scene.scale.set(1, 1.5, 1)
-        // console.log("SCENEEEEEEE GRP", gltf.scene.children)
-        scene.add(gltf.scene)
+        luffyHat.scene.position.set(0, 0, 0)
+        luffyHat.scene.scale.set(0.9, 1.5, 1)
+        scene.add(luffyHat.scene)
 
         groundFlower.scene.position.set(0, -2, 0)
-        groundFlower.scene.scale.set(0.5, 0.5, 0.5)
+        groundFlower.scene.scale.set(0.3, 0.5, 0.5)
         scene.add(groundFlower.scene)
 
 
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(100, 100), new THREE.MeshBasicMaterial({ map: floorTexture }))
-        mesh.position.set(0, -2, 0) // Adjust position as needed
-        mesh.scale.set(0.05, 0.05, 0.05) // Adjust scale as needed
-        mesh.rotation.set(Math.PI / 2, 0, 0)
-        scene.add(mesh)
+        groundFloor.position.set(0, -2, 0)
+        groundFloor.scale.set(0.04, 0.04, 0.05)
+        groundFloor.rotation.set(Math.PI / 2, 0, 0)
+        scene.add(groundFloor)
 
-        const amplitudeX = 5 // Amplitude in x-direction
-        const amplitudeY = 2 // Amplitude in y-direction
+        scene.scale.set(0.4, 0.5, 0.4)
+        // scene.scale.set(window.innerWidth / 4000, window.innerHeight / 1500, window.innerHeight / 1500)
 
+        const amplitudeX = 5
+        const amplitudeY = 2
         butterflies.forEach(butterfly => scene.add(butterfly))
 
 
@@ -234,7 +192,9 @@ const Scene = ({ }: Props) => {
             // group.rotation.x += 0.02;
             const elapsedTime = clock.getElapsedTime()
 
-            gltf.scene.rotation.y = 0.15 * elapsedTime
+            luffyHat.scene.rotation.y = 0.15 * elapsedTime
+            groundFlower.scene.rotation.y = 0.15 * elapsedTime
+            // groundFloor.rotation.z = 0.15 * elapsedTime
 
 
             butterflies.forEach((butterfly, index) => {
@@ -246,9 +206,10 @@ const Scene = ({ }: Props) => {
                 const dx = Math.cos(elapsedTime + index * 0.5)
                 const dy = Math.sin(2 * (elapsedTime + index * 0.5))
                 const direction = new THREE.Vector3(dx, dy, 0)
+                butterflies.indexOf(butterfly) % 2 == 0 ? butterfly.rotation.set(dx, dy, dx) : butterfly.rotation.set(dx, dx, dx)
 
                 // Rotate the butterfly to align with the direction of motion
-                butterfly.lookAt(butterfly.position.clone().add(direction))
+                // butterfly.lookAt(butterfly.position.clone().add(direction))
 
 
                 // const frequency = 0.5 * (1 + index) // Adjust the frequency of the motion
@@ -275,34 +236,7 @@ const Scene = ({ }: Props) => {
                 // butterfly.lookAt(butterfly.position.clone().add(direction))
 
             })
-
-            // const frequency = 0.5 // Adjust the frequency of the motion
-            // const amplitude = 2 // Adjust the amplitude of the motion
-
-            // // Calculate the position of the butterfly along the flight path
-            // const butterflyX = Math.cos(elapsedTime * frequency) * amplitude
-            // const butterflyY = Math.sin(elapsedTime * frequency * 2) * amplitude * 0.5 // Adjust the frequency and amplitude for vertical motion
-            // const butterflyZ = Math.sin(elapsedTime * frequency) * amplitude
-
-            // // // Set the position of the butterfly
-            // butterfly.scene.position.set(butterflyX, butterflyY, butterflyZ)
-
-            // // Rotate the butterfly to align with the flight direction
-            // butterfly.scene.rotation.y = Math.atan2(Math.cos(elapsedTime * frequency), Math.sin(elapsedTime * frequency))
-            // const dx = Math.cos(elapsedTime * frequency)
-            // const dy = Math.sin(elapsedTime * frequency * 2) * amplitude
-            // const dz = Math.cos(elapsedTime * frequency)
-            // const direction = new THREE.Vector3(dx, dy, dz)
-            // const rotationMatrix = new THREE.Matrix4().makeRotationY(Math.PI / 2)
-            // direction.applyMatrix4(rotationMatrix)
-
-
-            // // // Rotate the butterfly to align with the direction of motion
-            // butterfly.scene.lookAt(butterfly.scene.position.clone().add(direction))
-
-
-            controls.update()
-            renderer.render(scene, camera)
+            render()
             window.requestAnimationFrame(tick)
         }
         tick()
@@ -314,7 +248,56 @@ const Scene = ({ }: Props) => {
         animate()
     }
 
-    function render() {
+    const setupLights = () => {
+        // LIGHTS
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5)
+        scene.add(ambientLight)
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 2)
+        hemiLight.color.setHSL(0.6, 1, 0.6)
+        hemiLight.groundColor.setHSL(0.095, 1, 0.75)
+        hemiLight.position.set(0, 50, 0)
+        // scene.add(hemiLight)
+
+        const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10)
+        scene.add(hemiLightHelper)
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 3)
+        dirLight.color.setHSL(0.1, 0.7, 0.95)
+        dirLight.position.set(- 1, 1.75, 1)
+        dirLight.position.multiplyScalar(30)
+        scene.add(dirLight)
+
+        dirLight.castShadow = true
+
+        dirLight.shadow.mapSize.width = 2048
+        dirLight.shadow.mapSize.height = 2048
+
+        const d = 50
+
+        dirLight.shadow.camera.left = - d
+        dirLight.shadow.camera.right = d
+        dirLight.shadow.camera.top = d
+        dirLight.shadow.camera.bottom = - d
+
+        dirLight.shadow.camera.far = 3500
+        dirLight.shadow.bias = - 0.0001
+
+    }
+
+    const setupControls = () => {
+        controls.addEventListener('change', render)
+        controls.enableDamping = true
+        controls.dampingFactor = 0.05
+        controls.enableZoom = true
+        controls.minDistance = 2
+        controls.maxDistance = 9
+        controls.target.set(0, 0, - 0.2)
+        controls.update()
+    }
+
+    const render = () => {
 
         renderer.render(scene, camera)
 
@@ -330,23 +313,11 @@ const Scene = ({ }: Props) => {
     // Create an animation loop
     const animate = () => {
         requestAnimationFrame(animate)
+        controls.update()
         renderer.clear()
         renderer.render(scene, camera)
     }
 
-    // GUI
-    const setupGUI = () => {
-        const colorFolder = gui.addFolder("Color")
-        // Hex Color Selector
-        const color = colorFolder.addColor(geometryBaseColor, "hex")
-        color.onChange((value) => {
-            shaderMaterial.uniforms.color.value = new THREE.Color(value)
-        })
-        // R, G, B Slides
-        // colorFolder.add(shaderMaterial.uniforms.color.value, "r", 0, 1, 0.1);
-        // colorFolder.add(shaderMaterial.uniforms.color.value, "b", 0, 1, 0.1);
-        // colorFolder.add(shaderMaterial.uniforms.color.value, "g", 0, 1, 0.1);
-    }
 
     // MARK: Render
     return <Container ref={ containerRef } />
