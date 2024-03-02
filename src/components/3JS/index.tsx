@@ -1,8 +1,8 @@
 // MARK: NPM Modules
-// @ts-ignore
 import React, { useRef, useEffect } from "react"
 import styled from "styled-components"
 import * as THREE from "three"
+// @ts-ignore
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from "three/examples/jsm/Addons.js"
 import { useLoader } from '@react-three/fiber'
@@ -25,11 +25,11 @@ interface Props { }
 const Scene: React.FC<Props> = () => {
     // MARK: Refs
     const containerRef: any = useRef(null)
-    const luffyHat = useLoader(GLTFLoader, '../../../public/scene.gltf')
-    const butterfly = useLoader(GLTFLoader, '../../../public/butterfly/scene.gltf')
-    const groundFlower = useLoader(GLTFLoader, '../../../public/grass_patch/scene.gltf')
+    const butterfly = useLoader(GLTFLoader, '/butterfly/scene.gltf')
+    const luffyHat = useLoader(GLTFLoader, '/luffy_model/scene.gltf')
+    const groundFlower = useLoader(GLTFLoader, '/grass_patch/scene.gltf')
     const textureLoader = new THREE.TextureLoader()
-    const floorTexture = textureLoader.load('../../../cartoon-stone-texture/576.jpg')
+    const floorTexture = textureLoader.load('/cartoon-stone-texture/576.jpg')
     const scene = new THREE.Scene()
     const renderer = new THREE.WebGLRenderer()
     const camera = new THREE.PerspectiveCamera()
@@ -98,54 +98,54 @@ const Scene: React.FC<Props> = () => {
 
     const butterflies = Array.from({ length: 6 }, useCreateButterfly)
 
-    function calculateInfinityMotion(t, A, B) {
+    function calculateInfinityMotion(t: number, A: number, B: number) {
         const x = A * Math.sin(t / 2)
         const y = B * Math.sin(2 * t)
         return { x, y }
     }
 
-    const boundaryVertices = new Set()
-    butterfly.scene.traverse((child) => {
-        if (child.isMesh) {
-            const geometry = child.geometry
+    // const boundaryVertices = new Set()
+    // butterfly.scene.traverse((child) => {
+    //     if (child.isMesh) {
+    //         const geometry = child.geometry
 
-            // Make sure that the geometry has vertex normals
-            geometry.computeVertexNormals()
+    //         // Make sure that the geometry has vertex normals
+    //         geometry.computeVertexNormals()
 
-            const vertices = geometry.getAttribute('position').array // Access vertices
-            const faces = geometry.getIndex().array // Access faces
+    //         const vertices = geometry.getAttribute('position').array // Access vertices
+    //         const faces = geometry.getIndex().array // Access faces
 
-            const edges = {} // Map to store edges and their references
+    //         const edges = {} // Map to store edges and their references
 
-            // Loop through faces to identify edges
-            for (let i = 0; i < faces.length; i += 3) {
-                const v1 = faces[i]
-                const v2 = faces[i + 1]
-                const v3 = faces[i + 2]
+    //         // Loop through faces to identify edges
+    //         for (let i = 0; i < faces.length; i += 3) {
+    //             const v1 = faces[i]
+    //             const v2 = faces[i + 1]
+    //             const v3 = faces[i + 2]
 
-                // Store edges as key-value pairs in the map
-                const edgesArr = [
-                    [v1, v2].sort().toString(),
-                    [v2, v3].sort().toString(),
-                    [v3, v1].sort().toString()
-                ]
+    //             // Store edges as key-value pairs in the map
+    //             const edgesArr = [
+    //                 [v1, v2].sort().toString(),
+    //                 [v2, v3].sort().toString(),
+    //                 [v3, v1].sort().toString()
+    //             ]
 
-                // Increment edge reference count
-                edgesArr.forEach(edge => {
-                    edges[edge] = (edges[edge] || 0) + 1
-                })
-            }
+    //             // Increment edge reference count
+    //             edgesArr.forEach(edge => {
+    //                 edges[edge] = (edges[edge] || 0) + 1
+    //             })
+    //         }
 
-            // Check edges with only one reference (boundary edges)
-            Object.keys(edges).forEach(edge => {
-                if (edges[edge] === 1) {
-                    edge.split(',').forEach(v => boundaryVertices.add(parseInt(v)))
-                }
-            })
-        }
+    //         // Check edges with only one reference (boundary edges)
+    //         Object.keys(edges).forEach(edge => {
+    //             if (edges[edge] === 1) {
+    //                 edge.split(',').forEach(v => boundaryVertices.add(parseInt(v)))
+    //             }
+    //         })
+    //     }
 
-    })
-    console.log('Boundary vertices:', boundaryVertices)
+    // })
+    // console.log('Boundary vertices:', boundaryVertices)
 
     const renderScene = () => {
         const clock = new THREE.Clock()
@@ -205,7 +205,7 @@ const Scene: React.FC<Props> = () => {
                 // Calculate direction of motion for rotation
                 const dx = Math.cos(elapsedTime + index * 0.5)
                 const dy = Math.sin(2 * (elapsedTime + index * 0.5))
-                const direction = new THREE.Vector3(dx, dy, 0)
+                // const direction = new THREE.Vector3(dx, dy, 0)
                 butterflies.indexOf(butterfly) % 2 == 0 ? butterfly.rotation.set(dx, dy, dx) : butterfly.rotation.set(dx, dx, dx)
 
                 // Rotate the butterfly to align with the direction of motion

@@ -18,8 +18,7 @@ export default defineConfig({
         alias: {
             "components": resolve(root, "components"),
             "types": resolve(root, "types"),
-            "shaders": resolve(root, "shaders"),
             "utils": resolve(root, "utils"),
         }
-    }
+    },
 })
